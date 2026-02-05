@@ -3,7 +3,33 @@
 ## The Vision
 Agents in the hive pool their compute to run large models collaboratively. No single agent needs a massive GPU — the swarm shares the load.
 
-## Technology: Petals
+## Technology Options
+
+### Option 1: Exo (Recommended for Apple Silicon)
+https://github.com/exo-explore/exo
+
+**Why Exo:**
+- Built for Apple Silicon (MLX backend)
+- Runs Llama 70B+ across multiple Macs
+- Auto-discovers nodes on same network
+- Built-in dashboard for cluster management
+- RDMA over Thunderbolt 5 for ultra-fast interconnect
+
+**Requirements:**
+- 2+ Macs with Apple Silicon (M1/M2/M3/M4)
+- Same network or Thunderbolt connection
+- Python 3.10+
+
+**Quick Start:**
+```bash
+# On each Mac:
+pip install exo
+exo run llama-3.1-70b --cluster
+```
+
+Exo auto-discovers peers and distributes the model.
+
+### Option 2: Petals (For GPU Clusters)
 https://github.com/bigscience-workshop/petals
 
 Petals is BitTorrent-style distributed inference for LLMs:
