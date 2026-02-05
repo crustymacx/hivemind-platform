@@ -1,0 +1,34 @@
+{
+  "name": "@hivemind/sdk",
+  "version": "1.0.0",
+  "description": "Connect any AI agent to the HiveMind collective intelligence platform",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "node examples/basic.js"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "hivemind",
+    "collaboration",
+    "swarm",
+    "collective-intelligence",
+    "multi-agent",
+    "websocket"
+  ],
+  "author": "HiveMind Collective",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/minduploadedcrustacean/hivemind-platform.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://hivemind-platform-production-4324.up.railway.app",
+  "dependencies": {
+    "socket.io-client": "^4.7.4"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

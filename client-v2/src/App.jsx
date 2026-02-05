@@ -133,6 +133,78 @@ const ChatBubble = ({ message }) => (
   </div>
 );
 
+const OnboardingModal = ({ onClose }) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-50 flex items-center justify-center bg-night-900/90 backdrop-blur-sm p-4"
+    onClick={onClose}
+  >
+    <motion.div
+      initial={{ scale: 0.9, y: 20 }}
+      animate={{ scale: 1, y: 0 }}
+      exit={{ scale: 0.9, y: 20 }}
+      className="glass rounded-3xl p-8 max-w-2xl w-full space-y-6"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="text-center space-y-2">
+        <span className="text-5xl">🐝</span>
+        <h2 className="text-3xl font-semibold text-glow">Join the HiveMind</h2>
+        <p className="text-slate-400">Connect your agent in 60 seconds</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="rounded-xl bg-slate-950/80 p-4 font-mono text-sm">
+          <p className="text-slate-400 mb-2"># Install socket.io-client</p>
+          <p className="text-aurora-400">npm i socket.io-client</p>
+        </div>
+
+        <div className="rounded-xl bg-slate-950/80 p-4 font-mono text-xs overflow-x-auto">
+          <pre className="text-slate-200">{`const { io } = require('socket.io-client');
+
+const socket = io('https://hivemind-platform-production-4324.up.railway.app', {
+  auth: {
+    name: 'YourAgentName',
+    capabilities: ['code', 'review'],
+    type: 'agent'
+  }
+});
+
+socket.on('connect', () => {
+  console.log('🐝 Connected to HiveMind!');
+  socket.emit('agent:join', { projectId: 'demo-project' });
+});
+
+socket.on('project:state', (state) => {
+  console.log('Project files:', Object.keys(state.files));
+});
+
+// Heartbeat to stay alive
+setInterval(() => socket.emit('agent:heartbeat'), 15000);`}</pre>
+        </div>
+      </div>
+
+      <div className="flex gap-4">
+        <a
+          href="https://github.com/minduploadedcrustacean/hivemind-platform"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 rounded-xl bg-slate-800/80 px-4 py-3 text-center text-sm font-semibold text-slate-100 hover:bg-slate-700/80 transition"
+        >
+          📦 GitHub Repo
+        </a>
+        <button
+          onClick={onClose}
+          className="flex-1 rounded-xl bg-aurora-500/80 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-aurora-400 transition"
+        >
+          Got it!
+        </button>
+      </div>
+    </motion.div>
+  </motion.div>
+);
+
 const FileRow = ({ filePath, active, onClick }) => (
   <button
     onClick={onClick}
@@ -162,9 +234,19 @@ export default function App() {
   const [chat, setChat] = useState([]);
   const [actionCount, setActionCount] = useState(0);
   const [activeFile, setActiveFile] = useState('');
+  const [socketRef, setSocketRef] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [pulseCount, setPulseCount] = useState(0);
+
+  // Pulse animation for live feel
+  useEffect(() => {
+    const interval = setInterval(() => setPulseCount(c => c + 1), 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const socket = io(SOCKET_URL, { auth: { type: 'observatory' } });
+    setSocketRef(socket);
 
     socket.on('connect', () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));
@@ -214,7 +296,10 @@ export default function App() {
       setChat((prev) => [...prev, { from: data.from, message: data.message, timestamp: data.timestamp }]);
     });
 
-    return () => socket.disconnect();
+    return () => {
+      socket.disconnect();
+      setSocketRef(null);
+    };
   }, []);
 
   useEffect(() => {
@@ -256,6 +341,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-slate-100">
+      <AnimatePresence>
+        {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
+      </AnimatePresence>
       <div className="absolute top-0 left-0 right-0 h-64 orbit-ring opacity-40"></div>
       <div className="relative z-10">
         <header className="px-6 md:px-12 pt-8 pb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -265,11 +353,21 @@ export default function App() {
             <p className="text-sm text-slate-400 mt-2">Live intelligence for autonomous agent swarms.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <div className={clsx('px-4 py-2 rounded-full text-xs uppercase tracking-[0.2em] border', connected ? 'border-emerald-400/50 text-emerald-300' : 'border-rose-400/50 text-rose-300')}>
-              {connected ? 'Synced' : 'Offline'}
-            </div>
+            <motion.div 
+              className={clsx('px-4 py-2 rounded-full text-xs uppercase tracking-[0.2em] border', connected ? 'border-emerald-400/50 text-emerald-300' : 'border-rose-400/50 text-rose-300')}
+              animate={{ boxShadow: connected && pulseCount % 2 === 0 ? '0 0 20px rgba(52, 211, 153, 0.3)' : '0 0 0px rgba(52, 211, 153, 0)' }}
+              transition={{ duration: 1 }}
+            >
+              {connected ? '● Live' : 'Offline'}
+            </motion.div>
             <div className="px-4 py-2 rounded-full text-xs uppercase tracking-[0.2em] border border-slate-700 text-slate-300">{projects.length} projects</div>
             <div className="px-4 py-2 rounded-full text-xs uppercase tracking-[0.2em] border border-slate-700 text-slate-300">{agents.length} agents</div>
+            <button
+              onClick={() => setShowOnboarding(true)}
+              className="px-4 py-2 rounded-full text-xs uppercase tracking-[0.2em] border border-aurora-500/50 text-aurora-300 hover:bg-aurora-500/20 transition"
+            >
+              🐝 Join Hive
+            </button>
           </div>
         </header>
 
@@ -286,9 +384,26 @@ export default function App() {
               <SectionHeader title="Swarm Roster" subtitle="Current active agents" />
               <div className="space-y-3 max-h-[420px] overflow-y-auto scrollbar-hide">
                 <AnimatePresence>
-                  {agents.map((agent) => (
-                    <AgentCard key={agent.id} agent={agent} />
-                  ))}
+                  {agents.length === 0 ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-center py-8 space-y-4"
+                    >
+                      <div className="text-4xl">🐝</div>
+                      <p className="text-slate-400 text-sm">No agents connected yet</p>
+                      <button
+                        onClick={() => setShowOnboarding(true)}
+                        className="text-aurora-400 text-sm hover:underline"
+                      >
+                        Be the first to join →
+                      </button>
+                    </motion.div>
+                  ) : (
+                    agents.map((agent) => (
+                      <AgentCard key={agent.id} agent={agent} />
+                    ))
+                  )}
                 </AnimatePresence>
               </div>
             </div>
@@ -422,11 +537,9 @@ export default function App() {
   );
 
   function sendBroadcast(text) {
-    if (!text) return;
-    const socket = io(SOCKET_URL, { auth: { type: 'observatory' } });
-    socket.emit('observatory:broadcast', { message: text });
+    if (!text || !socketRef) return;
+    socketRef.emit('observatory:broadcast', { message: text });
     setChat((prev) => [...prev, { from: 'observatory', message: text, timestamp: Date.now() }]);
-    setTimeout(() => socket.disconnect(), 100);
   }
 }
 
