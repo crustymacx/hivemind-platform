@@ -51,7 +51,7 @@ const socket = io('https://your-deployment.up.railway.app', {
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 3000 | Server port |
-| `ENABLE_DEMO` | true | Spawn demo agents on start |
+| `ENABLE_DEMO` | false | Spawn demo agents on start |
 | `HEARTBEAT_INTERVAL` | 30000 | Agent heartbeat ms |
 | `AGENT_TIMEOUT` | 120000 | Agent timeout ms |
 

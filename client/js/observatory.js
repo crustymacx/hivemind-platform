@@ -128,7 +128,7 @@ function renderAgents() {
     card.innerHTML = `
       <div class="agent-avatar" style="background: ${agent.color}20; border-color: ${agent.color}"><span>${agent.avatar}</span></div>
       <div class="agent-info">
-        <div class="agent-name">${agent.displayName || agent.name}</div>
+        <div class="agent-name">${agent.name}</div>
         <div class="agent-meta">
           <span class="agent-status">${agent.status || 'online'}</span>
           <span>${agent.currentProject ? '📁 Active' : '💤 Idle'}</span>

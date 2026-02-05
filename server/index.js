@@ -80,8 +80,8 @@ app.get('/health', (req, res) => {
 // Initialize socket handling
 socketHandler.initialize();
 
-// Start demo mode - spawn simulated agents
-if (process.env.ENABLE_DEMO !== 'false') {
+// Start demo mode - spawn simulated agents (disabled by default)
+if (process.env.ENABLE_DEMO === 'true') {
   setTimeout(() => {
     socketHandler.startDemoMode();
   }, 2000);
