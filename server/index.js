@@ -8,6 +8,8 @@ const SocketHandler = require('./socket-handler');
 const AgentManager = require('./agent-manager');
 const ProjectManager = require('./project-manager');
 const SyncEngine = require('./sync-engine');
+const MemoryBus = require('./memory-bus');
+const TaskEngine = require('./task-engine');
 
 const app = express();
 const httpServer = createServer(app);
@@ -32,7 +34,9 @@ app.use(express.static(clientPath));
 const agentManager = new AgentManager();
 const projectManager = new ProjectManager();
 const syncEngine = new SyncEngine();
-const socketHandler = new SocketHandler(io, agentManager, projectManager, syncEngine);
+const memoryBus = new MemoryBus();
+const taskEngine = new TaskEngine();
+const socketHandler = new SocketHandler(io, agentManager, projectManager, syncEngine, memoryBus, taskEngine);
 
 // Routes
 app.get('/', (req, res) => {
@@ -76,6 +80,15 @@ app.get('/api/stats', (req, res) => {
     activeConnections: io.engine.clientsCount,
     uptime: process.uptime()
   });
+});
+
+app.get('/api/memory', (req, res) => {
+  res.json({ events: memoryBus.getRecent(100, req.query.projectId || null) });
+});
+
+app.post('/api/tasks', (req, res) => {
+  const task = taskEngine.createTask(req.body || {});
+  res.json({ task });
 });
 
 app.get('/health', (req, res) => {

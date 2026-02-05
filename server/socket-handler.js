@@ -5,11 +5,13 @@ const DemoAgents = require('./demo-agents');
  * Routes all socket events and manages real-time communication
  */
 class SocketHandler {
-  constructor(io, agentManager, projectManager, syncEngine) {
+  constructor(io, agentManager, projectManager, syncEngine, memoryBus, taskEngine) {
     this.io = io;
     this.agentManager = agentManager;
     this.projectManager = projectManager;
     this.syncEngine = syncEngine;
+    this.memoryBus = memoryBus;
+    this.taskEngine = taskEngine;
     this.demoAgents = null;
   }
 
@@ -63,6 +65,17 @@ class SocketHandler {
         message: data.message,
         timestamp: Date.now()
       });
+      this.memoryBus.append({
+        type: 'broadcast',
+        message: data.message,
+        author: 'observatory'
+      });
+    });
+
+    socket.on('observatory:create-task', (data) => {
+      const task = this.taskEngine.createTask(data || {});
+      this.io.emit('task:created', task);
+      this.memoryBus.append({ type: 'task:create', task });
     });
 
     socket.on('disconnect', () => {
