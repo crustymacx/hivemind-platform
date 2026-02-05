@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  background: radial-gradient(circle at top, rgba(56,189,248,0.12), transparent 55%),
+    radial-gradient(circle at 15% 25%, rgba(167,139,250,0.12), transparent 45%),
+    #06080f;
+  min-height: 100vh;
+}
+
+.glass {
+  background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(18px);
+}
+
+.orbit-ring {
+  background: radial-gradient(circle, rgba(56,189,248,0.25) 0%, rgba(56,189,248,0.0) 70%);
+}
+
+.text-glow {
+  text-shadow: 0 0 18px rgba(125, 211, 252, 0.35);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+.scrollbar-hide {
+  scrollbar-width: none;
+}

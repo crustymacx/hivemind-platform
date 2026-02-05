@@ -21,7 +21,12 @@ const io = new Server(httpServer, {
 
 // Middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../client')));
+
+const fs = require('fs');
+const clientV2Path = path.join(__dirname, '../client-v2/dist');
+const legacyClientPath = path.join(__dirname, '../client');
+const clientPath = fs.existsSync(clientV2Path) ? clientV2Path : legacyClientPath;
+app.use(express.static(clientPath));
 
 // Core services
 const agentManager = new AgentManager();
@@ -31,7 +36,7 @@ const socketHandler = new SocketHandler(io, agentManager, projectManager, syncEn
 
 // Routes
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/index.html'));
+  res.sendFile(path.join(clientPath, 'index.html'));
 });
 
 app.get('/api/projects', (req, res) => {
