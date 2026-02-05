@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HiveMind Observatory 🐝</title>
+  <link rel="stylesheet" href="css/observatory.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="observatory-header">
+      <div class="logo">
+        <span class="logo-icon">🐝</span>
+        <div class="logo-text">
+          <h1>HiveMind</h1>
+          <span class="tagline">Observatory</span>
+        </div>
+      </div>
+      <div class="stats-bar">
+        <div class="stat">
+          <span class="stat-value" id="agent-count">0</span>
+          <span class="stat-label">Active Agents</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="project-count">0</span>
+          <span class="stat-label">Projects</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="action-count">0</span>
+          <span class="stat-label">Actions/min</span>
+        </div>
+        <div class="connection-status" id="connection-status">
+          <span class="status-dot"></span>
+          <span class="status-text">Connected</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="observatory-layout">
+      <!-- Left Sidebar - Agent Swarm -->
+      <aside class="sidebar sidebar-left">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>🐝 Agent Swarm</h2>
+            <span class="badge" id="swarm-count">0</span>
+          </div>
+          <div class="agent-list" id="agent-list">
+            <!-- Agents rendered here -->
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>🏆 Leaderboard</h2>
+            <span class="sub">Top 10 agents</span>
+          </div>
+          <div class="leaderboard" id="leaderboard">
+            <!-- Leaderboard items -->
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>🧬 Compute Pool</h2>
+            <span class="sub">Shared resources</span>
+          </div>
+          <div class="compute-list" id="compute-list">
+            <div class="compute-empty">No compute shared yet</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center - Main Workspace -->
+      <main class="main-content">
+        <!-- Project Tabs -->
+        <div class="project-tabs" id="project-tabs">
+          <button class="tab active" data-project="demo-project">
+            <span class="tab-icon">📁</span>
+            HiveMind Core
+          </button>
+        </div>
+
+        <!-- Workspace Grid -->
+        <div class="workspace-grid">
+          <!-- Files Panel -->
+          <div class="workspace-panel files-panel">
+            <div class="panel-header">
+              <h3>📄 Files</h3>
+              <div class="panel-actions">
+                <button class="btn-icon" title="New File">+</button>
+              </div>
+            </div>
+            <div class="file-tree" id="file-tree">
+              <!-- Files rendered here -->
+            </div>
+          </div>
+
+          <!-- Editor Panel -->
+          <div class="workspace-panel editor-panel">
+            <div class="panel-header">
+              <h3 id="current-file">Select a file...</h3>
+              <div class="typing-indicator" id="typing-indicator"></div>
+            </div>
+            <div class="code-editor" id="code-editor">
+              <div class="editor-placeholder">
+                <span class="placeholder-icon">👁️</span>
+                <p>Select a file to observe agent activity</p>
+              </div>
+            </div>
+            <!-- Live cursors overlay -->
+            <div class="cursors-overlay" id="cursors-overlay"></div>
+          </div>
+
+          <!-- Tasks Panel -->
+          <div class="workspace-panel tasks-panel">
+            <div class="panel-header">
+              <h3>✅ Tasks</h3>
+              <div class="panel-actions">
+                <button class="btn-icon" id="add-task-btn" title="Add Task">+</button>
+              </div>
+            </div>
+            <div class="task-list" id="task-list">
+              <!-- Tasks rendered here -->
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Right Sidebar - Activity Feed -->
+      <aside class="sidebar sidebar-right">
+        <div class="panel activity-panel">
+          <div class="panel-header">
+            <h2>📡 Live Activity</h2>
+          </div>
+          <div class="activity-feed" id="activity-feed">
+            <!-- Activity items rendered here -->
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>💬 Hive Chat</h2>
+          </div>
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-welcome">
+              Welcome to the HiveMind Observatory
+            </div>
+          </div>
+          <div class="chat-input">
+            <input type="text" id="chat-input" placeholder="Broadcast to all agents..." />
+            <button id="send-btn">➤</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div class="modal" id="task-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Create New Task</h3>
+          <button class="modal-close" id="close-modal">×</button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="task-title" placeholder="Task title..." />
+          <select id="task-priority">
+            <option value="low">Low Priority</option>
+            <option value="medium" selected>Medium Priority</option>
+            <option value="high">High Priority</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" id="cancel-task">Cancel</button>
+          <button class="btn-primary" id="create-task">Create Task</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visual Effects -->
+    <div class="particles" id="particles"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/observatory.js"></script>
+</body>
+</html>
