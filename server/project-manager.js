@@ -4,9 +4,22 @@ const { v4: uuidv4 } = require('uuid');
  * ProjectManager - Manages projects, workspaces, and documents
  */
 class ProjectManager {
-  constructor() {
+  constructor(database) {
     this.projects = new Map();
-    this.initializeDemoProject();
+    this.database = database || null;
+
+    // Load persisted projects first
+    if (this.database) {
+      const persisted = this.database.loadAllProjects();
+      for (const p of persisted) {
+        this.projects.set(p.id, p);
+      }
+    }
+
+    // Only create demo project if nothing was loaded
+    if (this.projects.size === 0) {
+      this.initializeDemoProject();
+    }
   }
 
   /**
@@ -134,6 +147,9 @@ class Observatory {
     };
 
     this.projects.set('demo-project', demoProject);
+    if (this.database) {
+      this.database.saveProject(demoProject);
+    }
   }
 
   /**
@@ -151,8 +167,11 @@ class Observatory {
       tasks: [],
       activity: []
     };
-    
+
     this.projects.set(id, project);
+    if (this.database) {
+      this.database.saveProject(project);
+    }
     return project;
   }
 
@@ -204,7 +223,11 @@ class Observatory {
 
     project.files[filePath] = file;
     project.updatedAt = Date.now();
-    
+
+    if (this.database) {
+      this.database.saveFile(projectId, filePath, file);
+    }
+
     this.addActivity(projectId, {
       type: 'file:update',
       filePath,
@@ -233,7 +256,11 @@ class Observatory {
 
     project.files[filePath] = file;
     project.updatedAt = Date.now();
-    
+
+    if (this.database) {
+      this.database.saveFile(projectId, filePath, file);
+    }
+
     this.addActivity(projectId, {
       type: 'file:create',
       filePath,
@@ -328,6 +355,13 @@ class Observatory {
     const project = this.projects.get(projectId);
     if (!project) return [];
     return project.activity.slice(0, limit);
+  }
+
+  /**
+   * Get all projects with full data (for persistence flush)
+   */
+  getAllProjectsFull() {
+    return Array.from(this.projects.values());
   }
 }
 

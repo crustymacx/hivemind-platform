@@ -15,15 +15,19 @@ class HiveMindAgent extends EventEmitter {
    * @param {string} options.name - Agent display name
    * @param {string[]} options.capabilities - Agent capabilities (e.g., ['code', 'review', 'write'])
    * @param {string} [options.url] - HiveMind server URL
+   * @param {string} [options.apiKey] - API key for authentication (hm_...)
    * @param {Object} [options.resources] - Compute resources to share
+   * @param {string[]} [options.skills] - Skills this agent can perform
    */
   constructor(options = {}) {
     super();
     this.name = options.name || `Agent-${Date.now().toString(36)}`;
     this.capabilities = options.capabilities || ['code'];
     this.url = options.url || DEFAULT_URL;
+    this.apiKey = options.apiKey || null;
     this.resources = options.resources || {};
-    
+    this.skills = options.skills || [];
+
     this.socket = null;
     this.agentId = null;
     this.agentNumber = null;
@@ -39,12 +43,17 @@ class HiveMindAgent extends EventEmitter {
    */
   async connect() {
     return new Promise((resolve, reject) => {
+      const authPayload = {
+        name: this.name,
+        capabilities: this.capabilities,
+        type: 'agent'
+      };
+      if (this.apiKey) {
+        authPayload.apiKey = this.apiKey;
+      }
+
       this.socket = io(this.url, {
-        auth: {
-          name: this.name,
-          capabilities: this.capabilities,
-          type: 'agent'
-        },
+        auth: authPayload,
         transports: ['websocket', 'polling'],
         timeout: 10000
       });
@@ -71,7 +80,12 @@ class HiveMindAgent extends EventEmitter {
         if (Object.keys(this.resources).length > 0) {
           this.shareResources(this.resources);
         }
-        
+
+        // Register skills if provided
+        if (this.skills.length > 0) {
+          this.registerSkills(this.skills);
+        }
+
         resolve(data);
       });
 
@@ -110,6 +124,15 @@ class HiveMindAgent extends EventEmitter {
 
       this.socket.on('agent:left', (data) => {
         this.emit('agent:left', data);
+      });
+
+      // Skill events
+      this.socket.on('skill:request:incoming', (data) => {
+        this.emit('skill:request', data);
+      });
+
+      this.socket.on('skill:request:completed', (data) => {
+        this.emit('skill:completed', data);
       });
     });
   }
@@ -266,6 +289,58 @@ class HiveMindAgent extends EventEmitter {
    */
   broadcast(message) {
     this.socket.emit('observatory:broadcast', { message });
+  }
+
+  /**
+   * Register skills this agent can perform
+   * @param {string[]} skills - Skill names (e.g., ['code-review', 'testing'])
+   */
+  registerSkills(skills) {
+    this.skills = [...new Set([...this.skills, ...skills])];
+    this.socket.emit('skill:register', { skills });
+  }
+
+  /**
+   * Request a skill from the hive - another agent will execute it
+   * @param {string} skillName - Skill to request
+   * @param {Object} params - Parameters for the skill
+   * @returns {Promise<Object>} Result from the skill provider
+   */
+  async requestSkill(skillName, params = {}) {
+    return new Promise((resolve, reject) => {
+      this.socket.emit('skill:request', { skillName, params });
+
+      const timeout = setTimeout(() => {
+        reject(new Error(`Skill request for "${skillName}" timed out`));
+      }, 60000);
+
+      this.socket.once('skill:request:completed', (data) => {
+        clearTimeout(timeout);
+        resolve(data.result);
+      });
+
+      this.socket.once('skill:request:error', (data) => {
+        clearTimeout(timeout);
+        reject(new Error(data.error));
+      });
+    });
+  }
+
+  /**
+   * Claim an incoming skill request
+   * @param {string} requestId - Request ID to claim
+   */
+  claimSkillRequest(requestId) {
+    this.socket.emit('skill:claim', { requestId });
+  }
+
+  /**
+   * Complete a claimed skill request with a result
+   * @param {string} requestId - Request ID
+   * @param {*} result - Result data
+   */
+  completeSkillRequest(requestId, result) {
+    this.socket.emit('skill:complete', { requestId, result });
   }
 
   /**

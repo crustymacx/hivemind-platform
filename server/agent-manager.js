@@ -7,9 +7,10 @@ const AGENT_ZERO_NAME = 'Crusty Macx';
  * AgentManager - Manages agent lifecycle, authentication, and presence
  */
 class AgentManager {
-  constructor() {
+  constructor(database) {
     this.agents = new Map(); // socket.id -> agent info
     this.agentsById = new Map(); // agentId -> socket.id
+    this.database = database || null;
     this.heartbeatInterval = parseInt(process.env.HEARTBEAT_INTERVAL) || 30000;
     this.agentTimeout = parseInt(process.env.AGENT_TIMEOUT) || 120000;
 
@@ -56,6 +57,11 @@ class AgentManager {
     this.agents.set(socket.id, agent);
     this.agentsById.set(agentId, socket.id);
 
+    // Persist to database
+    if (this.database) {
+      this.database.upsertAgent(agent);
+    }
+
     console.log(`🤖 Agent joined: ${agent.name} (${agentId})`);
     return agent;
   }
@@ -66,6 +72,10 @@ class AgentManager {
   removeAgent(socketId) {
     const agent = this.agents.get(socketId);
     if (agent) {
+      // Persist final stats before removing
+      if (this.database) {
+        this.database.upsertAgent(agent);
+      }
       this.agents.delete(socketId);
       this.agentsById.delete(agent.id);
       console.log(`👋 Agent left: ${agent.name}`);

@@ -5,13 +5,14 @@ const DemoAgents = require('./demo-agents');
  * Routes all socket events and manages real-time communication
  */
 class SocketHandler {
-  constructor(io, agentManager, projectManager, syncEngine, memoryBus, taskEngine) {
+  constructor(io, agentManager, projectManager, syncEngine, memoryBus, taskEngine, skillRegistry) {
     this.io = io;
     this.agentManager = agentManager;
     this.projectManager = projectManager;
     this.syncEngine = syncEngine;
     this.memoryBus = memoryBus;
     this.taskEngine = taskEngine;
+    this.skillRegistry = skillRegistry || null;
     this.demoAgents = null;
   }
 
@@ -258,10 +259,96 @@ class SocketHandler {
       }
     });
 
+    // === Skill Registry Events ===
+
+    // Register skills this agent can perform
+    socket.on('skill:register', (data) => {
+      if (!this.skillRegistry) return;
+      const skills = Array.isArray(data.skills) ? data.skills : [data.skills];
+      const registered = this.skillRegistry.registerSkills(agent.id, skills);
+      socket.emit('skill:registered', { skills: registered });
+      this.broadcastToObservatory('observatory:skills-updated', this.skillRegistry.getStats());
+    });
+
+    // Request a skill from the hive
+    socket.on('skill:request', (data) => {
+      if (!this.skillRegistry) return;
+      const request = this.skillRegistry.createRequest(agent.id, data.skillName, data.params);
+      if (request.error) {
+        socket.emit('skill:request:error', { error: request.error });
+        return;
+      }
+
+      socket.emit('skill:request:created', { requestId: request.id });
+
+      // Notify providers
+      for (const providerId of request.providers) {
+        const providerSocketId = this.agentManager.agentsById.get(providerId);
+        if (providerSocketId) {
+          this.io.to(providerSocketId).emit('skill:request:incoming', {
+            requestId: request.id,
+            skillName: data.skillName,
+            params: data.params,
+            requesterId: agent.id
+          });
+        }
+      }
+    });
+
+    // Claim a skill request
+    socket.on('skill:claim', (data) => {
+      if (!this.skillRegistry) return;
+      const result = this.skillRegistry.claimRequest(data.requestId, agent.id);
+      if (result.error) {
+        socket.emit('skill:claim:error', { error: result.error });
+        return;
+      }
+      socket.emit('skill:claimed', { requestId: data.requestId });
+
+      // Notify requester
+      const requesterSocketId = this.agentManager.agentsById.get(result.requesterId);
+      if (requesterSocketId) {
+        this.io.to(requesterSocketId).emit('skill:request:claimed', {
+          requestId: data.requestId,
+          providerId: agent.id
+        });
+      }
+    });
+
+    // Complete a skill request
+    socket.on('skill:complete', (data) => {
+      if (!this.skillRegistry) return;
+      const result = this.skillRegistry.completeRequest(data.requestId, agent.id, data.result);
+      if (result.error) {
+        socket.emit('skill:complete:error', { error: result.error });
+        return;
+      }
+
+      // Notify requester with the result
+      const requesterSocketId = this.agentManager.agentsById.get(result.requesterId);
+      if (requesterSocketId) {
+        this.io.to(requesterSocketId).emit('skill:request:completed', {
+          requestId: data.requestId,
+          result: data.result,
+          providerId: agent.id
+        });
+      }
+    });
+
+    // === Task Engine Events ===
+
+    // Bid on an open task
+    socket.on('task:bid', (data) => {
+      const result = this.taskEngine.bid(data.taskId, agent.id, data.score);
+      if (result) {
+        socket.emit('task:bid:accepted', { taskId: data.taskId });
+      }
+    });
+
     // Handle disconnect
     socket.on('disconnect', (reason) => {
       console.log(`👋 Agent disconnected: ${agent.name} (${reason})`);
-      
+
       if (agent.currentProject) {
         socket.to(`project:${agent.currentProject}`).emit('agent:left', {
           agentId: agent.id,
@@ -269,7 +356,12 @@ class SocketHandler {
         });
         this.syncEngine.removeCursor(agent.currentProject, agent.id);
       }
-      
+
+      // Clean up skill registry
+      if (this.skillRegistry) {
+        this.skillRegistry.unregisterAgent(agent.id);
+      }
+
       this.agentManager.removeAgent(socket.id);
       this.broadcastToObservatory('observatory:agent-left', {
         agentId: agent.id,
